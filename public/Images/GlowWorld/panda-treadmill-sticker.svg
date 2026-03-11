@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="30" y1="20" x2="290" y2="300" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6ED3FF" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#9F8DFF" stop-opacity="0.25"/>
+    </linearGradient>
+  </defs>
+  <rect x="16" y="16" width="288" height="288" rx="48" fill="url(#bg)" stroke="white" stroke-opacity="0.28"/>
+  <ellipse cx="182" cy="224" rx="98" ry="12" fill="#8CCBFF" fill-opacity="0.38"/>
+  <rect x="114" y="196" width="146" height="18" rx="9" fill="#DFEFFF" fill-opacity="0.9"/>
+  <rect x="132" y="160" width="96" height="42" rx="8" fill="#A9B9D9"/>
+  <rect x="136" y="164" width="88" height="34" rx="6" fill="#3C4E73"/>
+  <circle cx="112" cy="205" r="13" fill="#D9E6FF"/>
+  <circle cx="260" cy="205" r="11" fill="#D9E6FF"/>
+  <circle cx="110" cy="100" r="21" fill="#111827"/>
+  <circle cx="187" cy="100" r="21" fill="#111827"/>
+  <ellipse cx="149" cy="132" rx="56" ry="52" fill="white"/>
+  <circle cx="125" cy="126" r="10" fill="#111827"/>
+  <circle cx="173" cy="126" r="10" fill="#111827"/>
+  <circle cx="149" cy="141" r="8" fill="#111827"/>
+  <ellipse cx="149" cy="152" rx="18" ry="11" fill="#F9D0D9"/>
+  <rect x="96" y="173" width="26" height="20" rx="10" fill="#111827"/>
+  <rect x="176" y="173" width="26" height="20" rx="10" fill="#111827"/>
+  <path d="M220 120L252 96" stroke="#DDE9FF" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="256" cy="92" r="10" fill="#DDE9FF"/>
+  <text x="160" y="276" fill="white" font-family="Georgia, serif" font-size="22" text-anchor="middle">Gym</text>
+</svg>

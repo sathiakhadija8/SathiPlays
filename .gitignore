@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+.next/
+dist/
+release/
+
+# Environment / secrets
+.env
+.env.*
+!.env.production.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime / cache
+.DS_Store
+*.tsbuildinfo
+
+# Local data dumps and backups
+backups/
+*.sql
+*.sql.gz
+
+# Generated uploads (optional: keep runtime uploads out of git)
+public/uploads/
+
+# Electron build artifacts
+electron/.app/

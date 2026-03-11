@@ -1,0 +1,76 @@
+{
+  "name": "sathiplays-homepage",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "next dev",
+    "dev:web": "next dev -p 3000",
+    "dev:clean": "rm -rf .next && next dev -p 3000",
+    "backup:db": "bash scripts/backup-db.sh",
+    "ops:preflight": "bash scripts/preflight-prod.sh",
+    "ops:health": "bash scripts/health-check-prod.sh",
+    "ops:restore:rehearsal": "bash scripts/restore-rehearsal.sh",
+    "db:migrate:status": "node scripts/db-migrate.cjs status",
+    "db:migrate:up": "node scripts/db-migrate.cjs up",
+    "db:migrate:create": "node scripts/db-migrate.cjs create",
+    "db:migrate:prod:status": "bash scripts/db-migrate-prod.sh status",
+    "db:migrate:prod:up": "bash scripts/db-migrate-prod.sh up",
+    "build": "next build",
+    "start": "next start",
+    "desktop": "electron .",
+    "desktop:dev": "concurrently \"npm run dev:web\" \"wait-on tcp:3000 && electron .\"",
+    "desktop:prep": "node scripts/prepare-electron.cjs",
+    "desktop:dist": "npm run build && npm run desktop:prep && electron-builder --mac",
+    "desktop:pack": "npm run build && npm run desktop:prep && electron-builder --dir --mac"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "chart.js": "^4.5.1",
+    "konva": "^9.3.16",
+    "mysql2": "^3.15.3",
+    "next": "^14.2.33",
+    "react": "^18.3.1",
+    "react-chartjs-2": "^5.3.1",
+    "react-dom": "^18.3.1",
+    "react-konva": "^18.2.10",
+    "recharts": "^3.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^9.2.1",
+    "electron": "^37.2.1",
+    "electron-builder": "^24.13.3",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.14",
+    "typescript": "^5.6.3",
+    "wait-on": "^8.0.5"
+  },
+  "main": "electron/main.cjs",
+  "build": {
+    "appId": "com.sathiplays.desktop",
+    "productName": "SathiPlays",
+    "asar": false,
+    "files": [
+      "electron/**/*",
+      "node_modules/**/*",
+      "package.json",
+      "electron/.app/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "Images/logo.png",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "directories": {
+      "output": "release"
+    }
+  }
+}

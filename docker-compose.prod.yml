@@ -1,0 +1,114 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      APP_PIN: ${APP_PIN}
+      PIN_AUTH_SECRET: ${PIN_AUTH_SECRET}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    expose:
+      - '3000'
+    healthcheck:
+      test: ['CMD', 'wget', '-qO', '-', 'http://127.0.0.1:3000/api/health']
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', '127.0.0.1', '-uroot', '-p${MYSQL_ROOT_PASSWORD}']
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  db-backup:
+    image: mysql:8.0
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_FILE_PREFIX: ${BACKUP_FILE_PREFIX:-sathiplays}
+    volumes:
+      - ./backups:/backups
+    command: >
+      sh -lc '
+        set -eu
+        mkdir -p /backups
+        while true; do
+          ts="$$(date -u +%Y%m%d-%H%M%S)"
+          out="/backups/$${BACKUP_FILE_PREFIX}-$${ts}.sql"
+          mysqldump --single-transaction --quick --skip-lock-tables \
+            -h "$${MYSQL_HOST}" -P "$${MYSQL_PORT}" \
+            -u"$${MYSQL_USER}" -p"$${MYSQL_PASSWORD}" "$${MYSQL_DATABASE}" > "$${out}"
+          gzip -f "$${out}"
+          find /backups -type f -name "$${BACKUP_FILE_PREFIX}-*.sql.gz" -mtime +"$${BACKUP_RETENTION_DAYS}" -delete
+          sleep "$${BACKUP_INTERVAL_SECONDS}"
+        done
+      '
+
+  db-cleanup:
+    image: mysql:8.0
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      CLEANUP_INTERVAL_SECONDS: ${CLEANUP_INTERVAL_SECONDS:-2592000}
+      CLEANUP_RETENTION_DAYS: ${CLEANUP_RETENTION_DAYS:-30}
+    volumes:
+      - ./scripts/monthly-cleanup.sh:/usr/local/bin/monthly-cleanup.sh:ro
+    command: ["sh", "/usr/local/bin/monthly-cleanup.sh"]
+
+  caddy:
+    image: caddy:2.8
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  mysql_data:
+  caddy_data:
+  caddy_config:
