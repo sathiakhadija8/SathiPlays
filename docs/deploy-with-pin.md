@@ -17,7 +17,7 @@ cp .env.production.example .env.production
 
 - Edit `.env.production` with real values:
   - `DOMAIN` -> your domain, e.g. `app.yourdomain.com`
-  - `APP_PIN` -> your unlock PIN
+  - `APP_PIN` -> your unlock PIN (`080803` if you want the current default)
   - `PIN_AUTH_SECRET` -> long random secret
   - DB passwords
 

@@ -1,6 +1,7 @@
 const COOKIE_NAME = 'sp_pin_auth';
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 const TOKEN_VERSION = 'v1';
+const DEFAULT_APP_PIN = '080803';
 
 function encoder() {
   return new TextEncoder();
@@ -34,8 +35,8 @@ async function hmacHex(secret: string, message: string): Promise<string> {
 }
 
 export function getPinConfig() {
-  const pin = process.env.APP_PIN?.trim() ?? '';
-  const secret = process.env.PIN_AUTH_SECRET?.trim() || process.env.APP_PIN?.trim() || '';
+  const pin = process.env.APP_PIN?.trim() || DEFAULT_APP_PIN;
+  const secret = process.env.PIN_AUTH_SECRET?.trim() || pin;
   return { pin, secret };
 }
 
