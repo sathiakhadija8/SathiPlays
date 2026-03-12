@@ -3,8 +3,10 @@ import { type RowDataPacket } from 'mysql2';
 import pool from '../../../../lib/db';
 import { ensureTravelTables, getTravelUserId, parseObject, parseStringArray } from '../../../../lib/travel-server';
 import { computeDurationDays, normalizeYmd } from '../../../../lib/travel-dates';
+import { isDataImageUrl, persistTravelImage, persistTravelImages } from '../../../../lib/travel-image-storage';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 type TripRow = RowDataPacket & {
   id: number;
@@ -170,6 +172,49 @@ export async function GET() {
       [userId],
     );
 
+    for (const row of tripRows) {
+      const originalCover = row.cover_image;
+      const originalGallery = parseStringArray(row.gallery_json);
+      try {
+        const persistedCover = await persistTravelImage(originalCover, 'trips');
+        const persistedGallery = await persistTravelImages(originalGallery, 'trips/gallery');
+
+        row.cover_image = persistedCover;
+        row.gallery_json = JSON.stringify(persistedGallery);
+
+        if (persistedCover !== originalCover || JSON.stringify(originalGallery) !== row.gallery_json) {
+          await pool.execute(
+            `UPDATE travel_trips
+             SET cover_image = ?, gallery_json = ?
+             WHERE id = ? AND user_id = ?`,
+            [row.cover_image, row.gallery_json, row.id, userId],
+          );
+        }
+      } catch {
+        row.cover_image = '';
+        row.gallery_json = '[]';
+      }
+    }
+
+    for (const row of dreamRows) {
+      const originalImage = row.image;
+      try {
+        const persistedImage = await persistTravelImage(originalImage, 'dreams');
+        row.image = persistedImage;
+
+        if (persistedImage !== originalImage) {
+          await pool.execute(
+            `UPDATE travel_dreams
+             SET image = ?
+             WHERE id = ? AND user_id = ?`,
+            [row.image, row.id, userId],
+          );
+        }
+      } catch {
+        row.image = '';
+      }
+    }
+
     const trips = tripRows.map((row) => ({
       startDateNormalized: normalizeYmd(row.start_date),
       endDateNormalized: normalizeYmd(row.end_date),
@@ -182,7 +227,7 @@ export async function GET() {
       endDate: endDateNormalized,
       duration_days: computeDurationDays(startDateNormalized, endDateNormalized),
       status: row.status,
-      coverImage: sanitizeImageUrl(row.cover_image),
+      coverImage: isDataImageUrl(row.cover_image) ? '' : sanitizeImageUrl(row.cover_image),
       plannedBudget: Number(row.planned_budget ?? 0),
       spentBudget: Number(row.spent_budget ?? 0),
       reflection: row.reflection ?? '',
@@ -194,7 +239,7 @@ export async function GET() {
       id: String(row.id),
       city: row.city,
       country: row.country,
-      image: sanitizeImageUrl(row.image),
+      image: isDataImageUrl(row.image) ? '' : sanitizeImageUrl(row.image),
       budgetEstimate: Number(row.budget_estimate ?? 0),
       tripType: row.trip_type,
       why: row.why_text ?? '',

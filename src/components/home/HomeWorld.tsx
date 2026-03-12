@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { BackgroundShell } from '../layout/BackgroundShell';
 import { usePlatformWindowOpen } from '../../lib/use-platform-window-open';
+import { ClosetPortals } from './ClosetPortals';
 
 const ROOM_OPTIONS = [
   { value: 'bedroom', label: 'Bedroom' },
@@ -1076,12 +1077,10 @@ export function HomeWorld() {
             <HomePlayBubble onOpen={() => setOpenHomePlay(true)} />
           </div>
           <div className="grid min-h-0 content-start justify-items-end gap-4 overflow-hidden pt-8">
-            <ClosetSummaryCard
-              counts={closetCounts}
-              onOpenManager={() => setOpenClosetManager(true)}
-              onRefresh={() => void loadCloset()}
-            />
-            <div className="w-full max-w-[520px]">
+            <div className="w-full max-w-[760px]">
+              <ClosetPortals />
+            </div>
+            <div className="w-full max-w-[760px]">
               <div className="flex justify-center">
                 <PlantSticker sizeClass="h-40 w-40 max-h-40 max-w-40" />
               </div>
@@ -1092,26 +1091,6 @@ export function HomeWorld() {
 
       <RoutineSystemModal open={openRoutineModal} onClose={() => setOpenRoutineModal(false)} />
       <HomePlayOverlay open={openHomePlay} onClose={() => setOpenHomePlay(false)} />
-      <ClosetManagerModal
-        open={openClosetManager}
-        onClose={() => setOpenClosetManager(false)}
-        loading={closetLoading}
-        search={closetSearch}
-        onSearchChange={setClosetSearch}
-        itemName={newItemName}
-        itemSize={newItemSize}
-        onItemSizeChange={setNewItemSize}
-        onFileChange={setNewItemFile}
-        fileInputKey={fileInputKey}
-        uploadingImage={uploadingClosetImage}
-        onItemNameChange={setNewItemName}
-        onAdd={() => void addClosetItem()}
-        items={filteredClosetItems}
-        selectedIds={selectedItemIds}
-        onToggleSelect={toggleItemSelection}
-        onSetItemState={(id, state) => void updateSingleItemState(id, state)}
-        onMoveSelected={(state) => void moveSelectedItemsTo(state)}
-      />
     </BackgroundShell>
   );
 }

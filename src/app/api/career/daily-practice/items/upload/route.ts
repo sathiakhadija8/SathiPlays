@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { FormDataRequestError, readMultipartFormData } from '../../../../../../lib/formdata-helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +16,7 @@ function sanitizeExt(filename: string, mimeType: string) {
 
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData();
+    const formData = await readMultipartFormData(request);
     const file = formData.get('file');
 
     if (!(file instanceof File) || file.size <= 0) {
@@ -38,7 +39,10 @@ export async function POST(request: Request) {
       ok: true,
       uploaded_icon_url: `/uploads/career/daily-practice/${filename}`,
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof FormDataRequestError) {
+      return NextResponse.json({ ok: false, message: error.message }, { status: 400 });
+    }
     return NextResponse.json({ ok: false, message: 'Unable to upload image.' }, { status: 500 });
   }
 }

@@ -5,14 +5,25 @@ import { NextResponse } from 'next/server';
 import { type ResultSetHeader } from 'mysql2';
 import pool from '../../../../../lib/db';
 import { addGlowPoints } from '../../../../../lib/glow-helpers';
+import { FormDataRequestError, readMultipartFormData } from '../../../../../lib/formdata-helpers';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
-  const connection = await pool.getConnection();
+  let formData: FormData;
   try {
-    const formData = await request.formData();
+    formData = await readMultipartFormData(request);
+  } catch (error) {
+    if (error instanceof FormDataRequestError) {
+      return NextResponse.json({ ok: false, message: error.message }, { status: 400 });
+    }
+    return NextResponse.json({ ok: false, message: 'Invalid upload payload.' }, { status: 400 });
+  }
+
+  const connection = await pool.getConnection();
+  let transactionStarted = false;
+  try {
     const file = formData.get('file');
     const routineId = Number(formData.get('routine_id'));
     const bookId = Number(formData.get('book_id'));
@@ -40,6 +51,7 @@ export async function POST(request: Request) {
     const publicPath = `/uploads/glow/images/${fileName}`;
 
     await connection.beginTransaction();
+    transactionStarted = true;
 
     const [insertResult] = await connection.execute<ResultSetHeader>(
       `INSERT INTO glow_images (routine_id, book_id, image_path, caption, quote)
@@ -52,8 +64,13 @@ export async function POST(request: Request) {
     await connection.commit();
 
     return NextResponse.json({ ok: true, insertedId: insertResult.insertId, image_path: publicPath, points_awarded: 10 });
-  } catch {
-    await connection.rollback();
+  } catch (error) {
+    if (transactionStarted) {
+      await connection.rollback();
+    }
+    if (error instanceof FormDataRequestError) {
+      return NextResponse.json({ ok: false, message: error.message }, { status: 400 });
+    }
     return NextResponse.json({ ok: false, message: 'Unable to upload glow image.' }, { status: 500 });
   } finally {
     connection.release();

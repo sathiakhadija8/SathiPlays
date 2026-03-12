@@ -4,6 +4,7 @@ import path from 'path';
 import { NextResponse } from 'next/server';
 import { type ResultSetHeader } from 'mysql2';
 import pool from '../../../../../lib/db';
+import { FormDataRequestError, readMultipartFormData } from '../../../../../lib/formdata-helpers';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -12,7 +13,7 @@ const ALLOWED_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/j
 
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData();
+    const formData = await readMultipartFormData(request);
     const titleRaw = formData.get('title');
     const file = formData.get('icon');
 
@@ -45,7 +46,10 @@ export async function POST(request: Request) {
     );
 
     return NextResponse.json({ ok: true, insertedId: result.insertId, icon_path: iconPath });
-  } catch {
+  } catch (error) {
+    if (error instanceof FormDataRequestError) {
+      return NextResponse.json({ ok: false, message: error.message }, { status: 400 });
+    }
     return NextResponse.json({ ok: false, message: 'Unable to create book.' }, { status: 500 });
   }
 }

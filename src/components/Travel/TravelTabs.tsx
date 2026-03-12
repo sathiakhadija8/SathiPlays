@@ -1,11 +1,12 @@
 'use client';
 
-export type TravelTabKey = 'trips' | 'dream' | 'planner';
+export type TravelTabKey = 'trips' | 'dream' | 'planner' | 'archive';
 
 const TABS: Array<{ key: TravelTabKey; label: string }> = [
   { key: 'trips', label: '✈️ My Trips' },
   { key: 'dream', label: '🌎 Dream Board' },
   { key: 'planner', label: '🧳 Planner' },
+  { key: 'archive', label: '📚 Archive' },
 ];
 
 export function TravelTabs({

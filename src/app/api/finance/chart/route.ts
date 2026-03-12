@@ -16,12 +16,23 @@ import {
 export const dynamic = 'force-dynamic';
 
 type SpendByDayRow = RowDataPacket & {
-  day: string;
+  day: string | Date;
   total: number | null;
 };
 
 function normalizeView(value: string | null): 'week' | 'month' {
   return value === 'month' ? 'month' : 'week';
+}
+
+function normalizeDay(value: string | Date) {
+  if (value instanceof Date) {
+    const y = value.getFullYear();
+    const m = String(value.getMonth() + 1).padStart(2, '0');
+    const d = String(value.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  if (typeof value === 'string') return value.slice(0, 10);
+  return '';
 }
 
 export async function GET(request: Request) {
@@ -40,19 +51,19 @@ export async function GET(request: Request) {
 
       const [rows] = await pool.execute<SpendByDayRow[]>(
         `
-        SELECT DATE_FORMAT(date, '%Y-%m-%d') AS day, COALESCE(SUM(amount), 0) AS total
+        SELECT DATE(date) AS day, COALESCE(SUM(amount), 0) AS total
         FROM finance_transactions
         WHERE user_id = ?
           AND direction = 'expense'
           AND date >= ?
           AND date < ?
-        GROUP BY DATE(date)
-        ORDER BY DATE(date)
+        GROUP BY day
+        ORDER BY day
         `,
         [getDemoUserId(), formatDateOnly(start), formatDateOnly(end)],
       );
 
-      const dayMap = new Map(rows.map((row) => [row.day, toNumber(row.total ?? 0)]));
+      const dayMap = new Map(rows.map((row) => [normalizeDay(row.day), toNumber(row.total ?? 0)]));
       const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
       const data: number[] = [];
 
@@ -72,21 +83,22 @@ export async function GET(request: Request) {
     const { start, end } = monthStartEnd(month);
     const [rows] = await pool.execute<SpendByDayRow[]>(
       `
-      SELECT DATE_FORMAT(date, '%Y-%m-%d') AS day, COALESCE(SUM(amount), 0) AS total
+      SELECT DATE(date) AS day, COALESCE(SUM(amount), 0) AS total
       FROM finance_transactions
       WHERE user_id = ?
         AND direction = 'expense'
         AND date >= ?
         AND date < ?
-      GROUP BY DATE(date)
-      ORDER BY DATE(date)
+      GROUP BY day
+      ORDER BY day
       `,
       [getDemoUserId(), start, end],
     );
 
     const buckets = [0, 0, 0, 0, 0];
     rows.forEach((row) => {
-      const dayOfMonth = Number(row.day.slice(8, 10));
+      const dayText = normalizeDay(row.day);
+      const dayOfMonth = Number(dayText.slice(8, 10));
       if (!Number.isFinite(dayOfMonth)) return;
       const index = Math.min(4, Math.floor((dayOfMonth - 1) / 7));
       buckets[index] += toNumber(row.total ?? 0);

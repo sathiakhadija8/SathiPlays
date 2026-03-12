@@ -24,6 +24,7 @@ yarn-error.log*
 backups/
 *.sql
 *.sql.gz
+!db/**/*.sql
 
 # Generated uploads (optional: keep runtime uploads out of git)
 public/uploads/

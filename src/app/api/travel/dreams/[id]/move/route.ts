@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { type ResultSetHeader, type RowDataPacket } from 'mysql2';
 import pool from '../../../../../../lib/db';
 import { ensureTravelTables, getTravelUserId } from '../../../../../../lib/travel-server';
+import { persistTravelImage, TravelImagePersistError } from '../../../../../../lib/travel-image-storage';
+
+export const runtime = 'nodejs';
 
 type DreamRow = RowDataPacket & {
   id: number;
@@ -52,11 +55,12 @@ export async function POST(_: Request, context: { params: { id: string } }) {
     }
 
     const today = londonTodayYmd();
+    const coverImage = await persistTravelImage(dream.image, 'trips');
     const [tripResult] = await connection.execute<ResultSetHeader>(
       `INSERT INTO travel_trips
        (user_id, city, country, start_date, end_date, status, cover_image, planned_budget, spent_budget, reflection, gallery_json, places_json)
        VALUES (?, ?, ?, ?, ?, 'upcoming', ?, ?, 0, ?, '[]', '[]')`,
-      [userId, dream.city, dream.country, today, today, dream.image, Number(dream.budget_estimate ?? 0), dream.why_text ?? null],
+      [userId, dream.city, dream.country, today, today, coverImage, Number(dream.budget_estimate ?? 0), dream.why_text ?? null],
     );
 
     await connection.execute<ResultSetHeader>(
@@ -66,11 +70,14 @@ export async function POST(_: Request, context: { params: { id: string } }) {
 
     await connection.commit();
     return NextResponse.json({ ok: true, tripId: String(tripResult.insertId) });
-  } catch {
+  } catch (error) {
+    if (error instanceof TravelImagePersistError) {
+      await connection.rollback();
+      return NextResponse.json({ ok: false, message: error.message }, { status: 400 });
+    }
     await connection.rollback();
     return NextResponse.json({ ok: false, message: 'Unable to move destination to trips.' }, { status: 500 });
   } finally {
     connection.release();
   }
 }
-

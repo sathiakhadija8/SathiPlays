@@ -4,13 +4,14 @@ import path from 'path';
 import { NextResponse } from 'next/server';
 import { type ResultSetHeader } from 'mysql2';
 import pool from '../../../../../lib/db';
+import { FormDataRequestError, readMultipartFormData } from '../../../../../lib/formdata-helpers';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData();
+    const formData = await readMultipartFormData(request);
     const file = formData.get('file');
     const displayNameRaw = formData.get('display_name');
     const tagRaw = formData.get('tag');
@@ -41,7 +42,10 @@ export async function POST(request: Request) {
     );
 
     return NextResponse.json({ ok: true, insertedId: result.insertId, file_path: publicPath });
-  } catch {
+  } catch (error) {
+    if (error instanceof FormDataRequestError) {
+      return NextResponse.json({ ok: false, message: error.message }, { status: 400 });
+    }
     return NextResponse.json({ ok: false, message: 'Unable to upload CV file.' }, { status: 500 });
   }
 }

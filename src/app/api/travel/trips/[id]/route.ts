@@ -3,6 +3,9 @@ import { type ResultSetHeader } from 'mysql2';
 import pool from '../../../../../lib/db';
 import { ensureTravelTables, getTravelUserId } from '../../../../../lib/travel-server';
 import { computeDurationDays } from '../../../../../lib/travel-dates';
+import { persistTravelImage, persistTravelImages, TravelImagePersistError } from '../../../../../lib/travel-image-storage';
+
+export const runtime = 'nodejs';
 
 type Body = {
   city?: unknown;
@@ -58,7 +61,7 @@ export async function PATCH(request: Request, context: { params: { id: string } 
     const startDate = String(body.startDate ?? '').trim();
     const endDate = String(body.endDate ?? '').trim();
     const status = String(body.status ?? '').trim();
-    const coverImage = String(body.coverImage ?? '').trim();
+    const coverImageRaw = String(body.coverImage ?? '').trim();
     const plannedBudget = parseNonNegativeNumber(body.plannedBudget ?? 0);
     const spentBudget = parseNonNegativeNumber(body.spentBudget ?? 0);
     const reflection = String(body.reflection ?? '').trim();
@@ -76,10 +79,13 @@ export async function PATCH(request: Request, context: { params: { id: string } 
       return NextResponse.json({ ok: false, message: 'endDate must be on or after startDate.' }, { status: 400 });
     }
     if (!isTripStatus(status)) return NextResponse.json({ ok: false, message: 'status is invalid.' }, { status: 400 });
-    if (!coverImage) return NextResponse.json({ ok: false, message: 'coverImage is required.' }, { status: 400 });
+    if (!coverImageRaw) return NextResponse.json({ ok: false, message: 'coverImage is required.' }, { status: 400 });
     if (plannedBudget === null || spentBudget === null) {
       return NextResponse.json({ ok: false, message: 'plannedBudget/spentBudget must be non-negative numbers.' }, { status: 400 });
     }
+
+    const coverImage = await persistTravelImage(coverImageRaw, 'trips');
+    const persistedGallery = await persistTravelImages(gallery, 'trips/gallery');
 
     const [result] = await pool.execute<ResultSetHeader>(
       `UPDATE travel_trips
@@ -96,7 +102,7 @@ export async function PATCH(request: Request, context: { params: { id: string } 
         plannedBudget,
         spentBudget,
         reflection || null,
-        JSON.stringify(gallery),
+        JSON.stringify(persistedGallery),
         JSON.stringify(placesVisited),
         id,
         userId,
@@ -107,7 +113,10 @@ export async function PATCH(request: Request, context: { params: { id: string } 
       return NextResponse.json({ ok: false, message: 'Trip not found.' }, { status: 404 });
     }
     return NextResponse.json({ ok: true, duration_days: computeDurationDays(startDate, endDate) });
-  } catch {
+  } catch (error) {
+    if (error instanceof TravelImagePersistError) {
+      return NextResponse.json({ ok: false, message: error.message }, { status: 400 });
+    }
     return NextResponse.json({ ok: false, message: 'Unable to update trip.' }, { status: 500 });
   }
 }

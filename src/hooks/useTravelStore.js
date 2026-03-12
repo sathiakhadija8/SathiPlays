@@ -10,6 +10,35 @@ const DEFAULT_STATE = {
   plannerData: {},
 };
 
+function isDataUrl(value) {
+  return typeof value === 'string' && value.startsWith('data:');
+}
+
+function toCacheState(state) {
+  if (!state || typeof state !== 'object') return DEFAULT_STATE;
+
+  const trips = Array.isArray(state.trips)
+    ? state.trips.map((trip) => ({
+      ...trip,
+      coverImage: isDataUrl(trip?.coverImage) ? '' : (trip?.coverImage || ''),
+      gallery: Array.isArray(trip?.gallery) ? trip.gallery.filter((value) => typeof value === 'string' && !isDataUrl(value)) : [],
+    }))
+    : [];
+
+  const dreamDestinations = Array.isArray(state.dreamDestinations)
+    ? state.dreamDestinations.map((dream) => ({
+      ...dream,
+      image: isDataUrl(dream?.image) ? '' : (dream?.image || ''),
+    }))
+    : [];
+
+  return {
+    trips,
+    dreamDestinations,
+    plannerData: state.plannerData && typeof state.plannerData === 'object' ? state.plannerData : {},
+  };
+}
+
 function normalizeState(raw) {
   if (!raw || typeof raw !== 'object') return DEFAULT_STATE;
   return {
@@ -46,7 +75,11 @@ export function useTravelStore() {
       const next = normalizeState(payload);
       setState(next);
       setError('');
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(toCacheState(next)));
+      } catch {
+        // ignore cache failures (for example quota exceeded)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load travel data.');
       try {
@@ -71,7 +104,7 @@ export function useTravelStore() {
   useEffect(() => {
     if (!isLoaded) return;
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(toCacheState(state)));
     } catch {
       // ignore
     }
@@ -194,4 +227,3 @@ export function useTravelStore() {
     ],
   );
 }
-

@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 import { NextResponse } from 'next/server';
+import { FormDataRequestError, readMultipartFormData } from '../../../../../lib/formdata-helpers';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -10,7 +11,7 @@ const ALLOWED_TYPES = new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/we
 
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData();
+    const formData = await readMultipartFormData(request);
     const file = formData.get('file');
 
     if (!(file instanceof File)) {
@@ -33,7 +34,10 @@ export async function POST(request: Request) {
     await writeFile(filePath, buffer);
 
     return NextResponse.json({ ok: true, image_path: `/uploads/vinted/items/${fileName}` });
-  } catch {
+  } catch (error) {
+    if (error instanceof FormDataRequestError) {
+      return NextResponse.json({ ok: false, message: error.message }, { status: 400 });
+    }
     return NextResponse.json({ ok: false, message: 'Unable to upload item image.' }, { status: 500 });
   }
 }

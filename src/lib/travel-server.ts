@@ -68,6 +68,103 @@ export async function ensureTravelTables() {
             FOREIGN KEY (trip_id) REFERENCES travel_trips(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
       `);
+
+      await pool.execute(`
+        CREATE TABLE IF NOT EXISTS travel_planner_templates (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT NOT NULL DEFAULT 1,
+          name VARCHAR(180) NOT NULL,
+          trip_mode ENUM('same_day','weekend','holiday','custom') NOT NULL DEFAULT 'custom',
+          template_json LONGTEXT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          KEY idx_travel_templates_user (user_id),
+          KEY idx_travel_templates_mode (trip_mode)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+      `);
+
+      await pool.execute(`
+        CREATE TABLE IF NOT EXISTS travel_trip_reminders (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT NOT NULL DEFAULT 1,
+          trip_id INT NOT NULL,
+          reminder_type ENUM('countdown','checkin','gate','hotel','refund','custom') NOT NULL DEFAULT 'custom',
+          title VARCHAR(220) NOT NULL,
+          notes TEXT NULL,
+          remind_at DATETIME NOT NULL,
+          is_done TINYINT(1) NOT NULL DEFAULT 0,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          KEY idx_travel_reminders_user (user_id),
+          KEY idx_travel_reminders_trip (trip_id),
+          KEY idx_travel_reminders_when (remind_at),
+          CONSTRAINT fk_travel_reminders_trip
+            FOREIGN KEY (trip_id) REFERENCES travel_trips(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+      `);
+
+      await pool.execute(`
+        CREATE TABLE IF NOT EXISTS travel_trip_memories (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT NOT NULL DEFAULT 1,
+          trip_id INT NOT NULL,
+          memory_date DATE NULL,
+          title VARCHAR(220) NOT NULL,
+          notes TEXT NULL,
+          rating TINYINT NULL,
+          photos_json LONGTEXT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          KEY idx_travel_memories_user (user_id),
+          KEY idx_travel_memories_trip (trip_id),
+          KEY idx_travel_memories_date (memory_date),
+          CONSTRAINT fk_travel_memories_trip
+            FOREIGN KEY (trip_id) REFERENCES travel_trips(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+      `);
+
+      await pool.execute(`
+        CREATE TABLE IF NOT EXISTS travel_forgotten_items (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT NOT NULL DEFAULT 1,
+          item_text VARCHAR(220) NOT NULL,
+          miss_count INT NOT NULL DEFAULT 1,
+          last_trip_id INT NULL,
+          last_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          UNIQUE KEY uniq_travel_forgotten_item (user_id, item_text),
+          KEY idx_travel_forgotten_count (miss_count),
+          KEY idx_travel_forgotten_last_trip (last_trip_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+      `);
+
+      await pool.execute(`
+        CREATE TABLE IF NOT EXISTS travel_trip_bookings (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT NOT NULL DEFAULT 1,
+          trip_id INT NOT NULL,
+          booking_type ENUM('flight','hotel','train','activity','other') NOT NULL DEFAULT 'other',
+          title VARCHAR(220) NOT NULL,
+          provider VARCHAR(180) NULL,
+          reference_code VARCHAR(120) NULL,
+          start_at DATETIME NULL,
+          end_at DATETIME NULL,
+          checkin_at DATETIME NULL,
+          gate_at DATETIME NULL,
+          hotel_window_start_at DATETIME NULL,
+          hotel_window_end_at DATETIME NULL,
+          refund_deadline_at DATETIME NULL,
+          notes TEXT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          KEY idx_travel_bookings_user (user_id),
+          KEY idx_travel_bookings_trip (trip_id),
+          KEY idx_travel_bookings_type (booking_type),
+          CONSTRAINT fk_travel_bookings_trip
+            FOREIGN KEY (trip_id) REFERENCES travel_trips(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+      `);
     })();
   }
 

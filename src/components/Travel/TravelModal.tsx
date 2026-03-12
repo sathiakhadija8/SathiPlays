@@ -7,6 +7,7 @@ import { usePlatformWindowOpen } from '../../lib/use-platform-window-open';
 import { DreamBoard } from './DreamBoard';
 import { MyTrips } from './MyTrips';
 import { Planner } from './Planner';
+import { TravelArchive } from './TravelArchive';
 import { TravelTabs, type TravelTabKey } from './TravelTabs';
 
 export function TravelModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -81,7 +82,7 @@ export function TravelModal({ open, onClose }: { open: boolean; onClose: () => v
                   })();
                 }}
               />
-            ) : (
+            ) : activeTravelTab === 'planner' ? (
               <Planner
                 upcomingTrips={trips.filter((trip) => trip.status === 'upcoming')}
                 plannerByTripId={plannerData}
@@ -92,6 +93,8 @@ export function TravelModal({ open, onClose }: { open: boolean; onClose: () => v
                   await updateTrip({ ...trip, status: 'completed' });
                 }}
               />
+            ) : (
+              <TravelArchive />
             )}
           </div>
         </div>
